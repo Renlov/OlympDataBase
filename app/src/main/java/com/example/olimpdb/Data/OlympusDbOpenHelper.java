@@ -20,7 +20,7 @@ public class OlympusDbOpenHelper extends SQLiteOpenHelper {
                 + MemberEntry.KEY_FIRST_NAME + " TEXT,"
                 + MemberEntry.KEY_LAST_NAME + " TEXT,"
                 + MemberEntry.KEY_GENDER + " INTEGER NOT NULL,"
-                + MemberEntry.KEY_GROUP + " TEXT" + ")";
+                + MemberEntry.KEY_SPORT + " TEXT" + ")";
         db.execSQL(CREATE_TABLE_MEMBERS);
     }
 

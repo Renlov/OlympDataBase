@@ -1,10 +1,15 @@
 package com.example.olimpdb.Data;
 
 import android.content.ContentProvider;
+import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.UriMatcher;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
+import android.util.Log;
+
+import com.example.olimpdb.Data.ClubOlympusContract.*;
 
 public class OlympusContentProvider extends ContentProvider {
 
@@ -27,13 +32,61 @@ public class OlympusContentProvider extends ContentProvider {
     }
 
     @Override
+    //Запрашивает данные из таблицы
+    //URI - идентификатор ресурса
+    //content://com.android.example.olimpdb/members/34
+    //projection - имена столбцов {"lastName", "gender"}
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
-        return null;
+        SQLiteDatabase db = dbOpenHelper.getReadableDatabase();
+        Cursor cursor;
+
+        int match = uriMatcher.match(uri);
+
+        switch (match){
+            case MEMBERS:
+                //Работаем со всеми таблицами
+                cursor = db.query(MemberEntry.TABLE_NAME,
+                        projection, selection, selectionArgs, null, null,
+                        sortOrder);
+                break;
+
+            case MEMBER_ID:
+                //Selection - отбор по ID
+                //SelectionArgs - аргументы для отбора (34)
+                selection = MemberEntry._ID + "=?";
+                selectionArgs = new String[] {String.valueOf(ContentUris.parseId(uri))};
+                //в cursor передаем то, что хотим получить
+                cursor = db.query(MemberEntry.TABLE_NAME, projection, selection,
+                        selectionArgs, null, null, sortOrder);
+                break;
+
+            default:
+                //В случае некорректного URI
+                    throw new IllegalArgumentException("Can't query incorrect URI" + uri);
+        }
+        return cursor;
     }
 
        @Override
+       //URI - идентификатор ресурса
+       //content://com.android.example.olimpdb/members - запрос делаем такой,
+       //по итогу получаем content://com.android.example.olimpdb/members/34
     public Uri insert(Uri uri, ContentValues values) {
-        return null;
+        SQLiteDatabase database  = dbOpenHelper.getWritableDatabase();
+        int match = uriMatcher.match(uri);
+           switch (match){
+               case MEMBERS:
+                   long id = database.insert(MemberEntry.TABLE_NAME, null, values);
+                   if(id == -1){
+                       Log.e("insertMethod", "Insertion of data the table failed for " + uri);
+                       return null;
+                   }
+                   return ContentUris.withAppendedId(uri, id);
+
+               default:
+                   //В случае некорректного URI
+                   throw new IllegalArgumentException("Can't query incorrect URI" + uri);
+           }
     }
 
     @Override
