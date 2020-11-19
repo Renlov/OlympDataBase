@@ -2,6 +2,7 @@ package com.example.olimpdb;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NavUtils;
 import androidx.loader.app.LoaderManager;
@@ -10,6 +11,7 @@ import androidx.loader.content.Loader;
 
 import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
@@ -48,10 +50,13 @@ public class AddMember extends AppCompatActivity  implements LoaderManager.Loade
 
         Intent intent = getIntent();
         currentMemberUri = intent.getData();
+
         if(currentMemberUri == null){
             setTitle("Add a member");
+            invalidateOptionsMenu();
         } else {
             setTitle("Edit the member");
+            getSupportLoaderManager().initLoader(EDIT_MEMBER_LOADER, null, this);
         }
 
         firstName = findViewById(R.id.firstName);
@@ -85,9 +90,20 @@ public class AddMember extends AppCompatActivity  implements LoaderManager.Loade
                 gender = 0;
             }
         });
-        getSupportLoaderManager().initLoader(EDIT_MEMBER_LOADER, null, this);
+
 
     }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        super.onPrepareOptionsMenu(menu);
+        if(currentMemberUri == null){
+            MenuItem menuItem = menu.findItem(R.id.delete_member);
+            menuItem.setVisible(false);
+        }
+        return true;
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.edit_addmember, menu);
@@ -98,9 +114,10 @@ public class AddMember extends AppCompatActivity  implements LoaderManager.Loade
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         switch (item.getItemId()){
             case R.id.save_member:
-                insertMember();
+                saveMember();
                 return true;
             case R.id.delete_member:
+                showDeleteMember();
                 return true;
             case R.id.home:
                 NavUtils.navigateUpFromSameTask(this);
@@ -108,10 +125,28 @@ public class AddMember extends AppCompatActivity  implements LoaderManager.Loade
         }
         return super.onOptionsItemSelected(item);
     }
-    private void insertMember(){
+    private void saveMember(){
+
         String name = firstName.getText().toString().trim();
         String last = lastName.getText().toString().trim();
         String sport = sportEditText.getText().toString().trim();
+
+        if(TextUtils.isEmpty(name)){
+            Toast.makeText(this, "Input name", Toast.LENGTH_LONG).show();
+            return;
+        }
+        else if(TextUtils.isEmpty(last)){
+            Toast.makeText(this, "Input last name", Toast.LENGTH_LONG).show();
+            return;
+        }
+        else if(TextUtils.isEmpty(sport)){
+            Toast.makeText(this, "Input sport", Toast.LENGTH_LONG).show();
+            return;
+        } else if(gender == MemberEntry.GENDER_UNKNOWN){
+            Toast.makeText(this, "Choose gender", Toast.LENGTH_LONG).show();
+            return;
+        }
+
 
         ContentValues contentValues = new ContentValues();
         contentValues.put(MemberEntry.KEY_FIRST_NAME, name);
@@ -120,13 +155,24 @@ public class AddMember extends AppCompatActivity  implements LoaderManager.Loade
         contentValues.put(MemberEntry.KEY_FIRST_NAME, name);
         contentValues.put(MemberEntry.KEY_GENDER, gender);
 
-        ContentResolver contentResolver = getContentResolver();
-        Uri uri = contentResolver.insert(MemberEntry.CONTENT_URI, contentValues);
-        if(uri == null){
-            Toast.makeText(this, "Insertion of data the table failed for", Toast.LENGTH_LONG).show();
+        if(currentMemberUri == null){
+            ContentResolver contentResolver = getContentResolver();
+            Uri uri = contentResolver.insert(MemberEntry.CONTENT_URI, contentValues);
+            if(uri == null){
+                Toast.makeText(this, "Insertion of data the table failed for", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "Data saved", Toast.LENGTH_SHORT).show();
+            }
         } else {
-            Toast.makeText(this, "Data saved", Toast.LENGTH_SHORT).show();
+            int rowsChanged = getContentResolver().update(currentMemberUri, contentValues,
+                    null, null);
+            if(rowsChanged == 0){
+                Toast.makeText(this, "Saving of data in the table failed", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "Member updated", Toast.LENGTH_SHORT).show();
+            }
         }
+
     }
 
     @NonNull
@@ -192,4 +238,40 @@ public class AddMember extends AppCompatActivity  implements LoaderManager.Loade
     public void onLoaderReset(@NonNull Loader<Cursor> loader) {
 
     }
+  private void showDeleteMember(){
+      AlertDialog.Builder builder = new AlertDialog.Builder(this);
+      builder.setMessage("Do you want delete the member?");
+      builder.setPositiveButton("DELETE",
+              new DialogInterface.OnClickListener() {
+                  @Override
+                  public void onClick(DialogInterface dialog, int which) {
+                      deleteMember();
+                  }
+              });
+      builder.setNegativeButton("CANCEL",
+              new DialogInterface.OnClickListener() {
+                  @Override
+                  public void onClick(DialogInterface dialog, int which) {
+                      if(dialog != null){
+                          dialog.dismiss();
+                      }
+                  }
+              });
+      AlertDialog alertDialog = builder.create();
+      alertDialog.show();
+  }
+  private void deleteMember(){
+        if(currentMemberUri != null) {
+            int rowsDeleted = getContentResolver().delete(currentMemberUri,
+                    null, null);
+            if(rowsDeleted == 0){
+                Toast.makeText(this, "Deleting of data in the table failed", Toast.LENGTH_LONG).show();
+
+            } else {
+                Toast.makeText(this, "Member is deleted", Toast.LENGTH_LONG).show();
+            }
+            finish();
+        }
+
+  }
 }
