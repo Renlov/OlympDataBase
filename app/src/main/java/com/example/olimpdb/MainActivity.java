@@ -1,26 +1,39 @@
 package com.example.olimpdb;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.CursorLoader;
+import androidx.loader.content.Loader;
 
+import android.content.ContentUris;
 import android.content.Intent;
 import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.TextView;
+import android.widget.AdapterView;
+import android.widget.ListView;
+
 
 import com.example.olimpdb.Data.ClubOlympusContract.MemberEntry;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity
+        implements LoaderManager.LoaderCallbacks<Cursor> {
 
-    TextView dataTextView;
+    private static final int MEMBER_LOADER = 123;
+    MemberCursorAdapter memberCursorAdapter;
+
+    ListView dataListView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        dataTextView = findViewById(R.id.dataTextView);
+        dataListView = findViewById(R.id.dataListView);
 
         FloatingActionButton floatingActionButton =
                 findViewById(R.id.floatingActionButton);
@@ -31,55 +44,49 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
+        memberCursorAdapter = new MemberCursorAdapter(this,null, false);
+        dataListView.setAdapter(memberCursorAdapter);
+
+        dataListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Intent intent = new Intent(MainActivity.this, AddMember.class);
+                Uri currentMemberUri = ContentUris.withAppendedId(MemberEntry.CONTENT_URI, id);
+                intent.setData(currentMemberUri);
+                startActivity(intent);
+            }
+        });
+
+        getSupportLoaderManager().initLoader(MEMBER_LOADER, null, this);
     }
 
+    @NonNull
     @Override
-    protected void onStart() {
-        super.onStart();
-        displayData();
-    }
-
-    private void displayData(){
+    //Выполнение действий в фоне
+    public Loader<Cursor> onCreateLoader(int id, @Nullable Bundle args) {
         String[] projection = {
                 MemberEntry.KEY_ID,
                 MemberEntry.KEY_FIRST_NAME,
                 MemberEntry.KEY_LAST_NAME,
-                MemberEntry.KEY_GENDER,
                 MemberEntry.KEY_SPORT
         };
-        Cursor cursor = getContentResolver().query(
+        CursorLoader cursorLoader = new CursorLoader(this,
                 MemberEntry.CONTENT_URI,
                 projection,
                 null, null, null
         );
+        return cursorLoader;
+    }
 
-        dataTextView.setText("All members\n\n");
-        dataTextView.append(MemberEntry.KEY_ID + " " +
-                MemberEntry.KEY_FIRST_NAME + " " +
-                MemberEntry.KEY_LAST_NAME + " " +
-                MemberEntry.KEY_GENDER + " " +
-                MemberEntry.KEY_SPORT);
+    @Override
+    //Принимает данные из onCreateLoader
+    public void onLoadFinished(@NonNull Loader<Cursor> loader, Cursor data) {
+        memberCursorAdapter.swapCursor(data);
+    }
 
-        int idIndex = cursor.getColumnIndex(MemberEntry.KEY_ID);
-        int firstNameIndex = cursor.getColumnIndex(MemberEntry.KEY_FIRST_NAME);
-        int lastNameIndex = cursor.getColumnIndex(MemberEntry.KEY_LAST_NAME);
-        int genderIndex = cursor.getColumnIndex(MemberEntry.KEY_GENDER);
-        int sportIndex = cursor.getColumnIndex(MemberEntry.KEY_SPORT);
-
-        while (cursor.moveToNext()){
-            int currentId = cursor.getInt(idIndex);
-            String currentFirstName = cursor.getString(firstNameIndex);
-            String currentLastName = cursor.getString(lastNameIndex);
-            int currentGender = cursor.getInt(genderIndex);
-            String currentSport = cursor.getString(sportIndex);
-
-            dataTextView.append("\n" +
-                    currentId + " " +
-                    currentFirstName + " " +
-                    currentLastName + " " +
-                    currentGender + " " +
-                    currentSport);
-        }
-            cursor.close();
+    @Override
+    //Удаляет не валидные Cursor
+    public void onLoaderReset(@NonNull Loader<Cursor> loader) {
+        memberCursorAdapter.swapCursor(null);
     }
 }

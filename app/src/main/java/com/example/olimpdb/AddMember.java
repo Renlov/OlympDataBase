@@ -1,11 +1,17 @@
 package com.example.olimpdb;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NavUtils;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.CursorLoader;
+import androidx.loader.content.Loader;
 
 import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -22,7 +28,10 @@ import com.example.olimpdb.Data.ClubOlympusContract.MemberEntry;
 
 import java.util.ArrayList;
 
-public class AddMember extends AppCompatActivity {
+public class AddMember extends AppCompatActivity  implements LoaderManager.LoaderCallbacks<Cursor> {
+
+    private static final int EDIT_MEMBER_LOADER = 111;
+    Uri currentMemberUri;
     private EditText firstName;
     private EditText lastName;
     private EditText sportEditText;
@@ -36,6 +45,14 @@ public class AddMember extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_member);
+
+        Intent intent = getIntent();
+        currentMemberUri = intent.getData();
+        if(currentMemberUri == null){
+            setTitle("Add a member");
+        } else {
+            setTitle("Edit the member");
+        }
 
         firstName = findViewById(R.id.firstName);
         lastName = findViewById(R.id.lastName);
@@ -68,6 +85,7 @@ public class AddMember extends AppCompatActivity {
                 gender = 0;
             }
         });
+        getSupportLoaderManager().initLoader(EDIT_MEMBER_LOADER, null, this);
 
     }
     @Override
@@ -109,5 +127,69 @@ public class AddMember extends AppCompatActivity {
         } else {
             Toast.makeText(this, "Data saved", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    @NonNull
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, @Nullable Bundle args) {
+
+        String[] projection = {
+                MemberEntry._ID,
+                MemberEntry.KEY_FIRST_NAME,
+                MemberEntry.KEY_LAST_NAME,
+                MemberEntry.KEY_GENDER,
+                MemberEntry.KEY_SPORT
+        };
+
+        return new CursorLoader(this,
+                currentMemberUri, projection,
+                null,null,null);
+    }
+
+
+    @Override
+    public void onLoadFinished(@NonNull Loader<Cursor> loader, Cursor data) {
+
+        if(data.moveToFirst()){
+            int firstNameColumnIndex = data.getColumnIndex(
+                    MemberEntry.KEY_FIRST_NAME
+            );
+            int lastNameColumnIndex = data.getColumnIndex(
+                    MemberEntry.KEY_LAST_NAME
+            );
+            int genderColumnIndex = data.getColumnIndex(
+                    MemberEntry.KEY_GENDER
+            );
+            int sportColumnIndex = data.getColumnIndex(
+                    MemberEntry.KEY_SPORT
+            );
+
+            String firstNameEdit = data.getString(firstNameColumnIndex);
+            String lastNameEdit = data.getString(lastNameColumnIndex);
+            int genderEdit = data.getInt(genderColumnIndex);
+            String sportEdit = data.getString(sportColumnIndex);
+
+            firstName.setText(firstNameEdit);
+            lastName.setText(lastNameEdit);
+            sportEditText.setText(sportEdit);
+
+
+            switch (genderEdit){
+                case  MemberEntry.GENDER_MALE:
+                    genderSpinner.setSelection(1);
+                    break;
+                case MemberEntry.GENDER_FEMALE:
+                    genderSpinner.setSelection(2);
+                    break;
+                case MemberEntry.GENDER_UNKNOWN:
+                    genderSpinner.setSelection(0);
+                    break;
+            }
+        }
+    }
+
+    @Override
+    public void onLoaderReset(@NonNull Loader<Cursor> loader) {
+
     }
 }
