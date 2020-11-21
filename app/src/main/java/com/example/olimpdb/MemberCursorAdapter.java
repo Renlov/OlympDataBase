@@ -11,6 +11,8 @@ import android.widget.TextView;
 
 import com.example.olimpdb.Data.ClubOlympusContract.MemberEntry;
 
+        //Класс для отображения столбцов
+
 public class MemberCursorAdapter extends CursorAdapter {
     public MemberCursorAdapter(Context context, Cursor c, boolean autoRequery) {
         super(context, c, autoRequery);
@@ -22,6 +24,7 @@ public class MemberCursorAdapter extends CursorAdapter {
     }
 
     @Override
+    //Инициализация текста для отображения на экране
     public void bindView(View view, Context context, Cursor cursor) {
 
         TextView firstNameTextView = view.findViewById(R.id.firstNameTextView);

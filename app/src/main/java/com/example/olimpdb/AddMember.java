@@ -131,6 +131,7 @@ public class AddMember extends AppCompatActivity  implements LoaderManager.Loade
         String last = lastName.getText().toString().trim();
         String sport = sportEditText.getText().toString().trim();
 
+        //Проверка на валидность
         if(TextUtils.isEmpty(name)){
             Toast.makeText(this, "Input name", Toast.LENGTH_LONG).show();
             return;
